@@ -2920,6 +2920,131 @@ def split_content_into_batches(
     return batches
 
 
+class NewsAnalyzer:
+    """High-level workflow: crawl -> persist -> analyze -> notify."""
+
+    def __init__(self):
+        self.config = CONFIG
+        self.report_mode = self.config["REPORT_MODE"]
+        self.platforms = self._normalize_platforms()
+        self.proxy_url = (
+            self.config["DEFAULT_PROXY"] if self.config["USE_PROXY"] else None
+        )
+        self.fetcher = DataFetcher(self.proxy_url if self.config["USE_PROXY"] else None)
+
+    def _normalize_platforms(self) -> List[Tuple[str, str]]:
+        normalized: List[Tuple[str, str]] = []
+        for platform in self.config.get("PLATFORMS", []):
+            if isinstance(platform, str):
+                platform_id = platform.strip()
+                if platform_id:
+                    normalized.append((platform_id, platform_id))
+            elif isinstance(platform, dict):
+                platform_id = (platform.get("id") or "").strip()
+                if platform_id:
+                    normalized.append((platform_id, platform.get("name", platform_id)))
+        return normalized
+
+    def _report_label(self) -> str:
+        mapping = {
+            "daily": "日常汇总",
+            "current": "当前快照",
+            "incremental": "增量播报",
+        }
+        return mapping.get(self.report_mode, "日常汇总")
+
+    def _build_update_info(self) -> Optional[Dict[str, str]]:
+        if not self.config["SHOW_VERSION_UPDATE"]:
+            return None
+        need_update, remote_version = check_version_update(
+            VERSION, self.config["VERSION_CHECK_URL"], self.proxy_url
+        )
+        if need_update and remote_version:
+            return {"remote_version": remote_version, "current_version": VERSION}
+        return None
+
+    def run(self) -> None:
+        if not self.platforms:
+            print("未配置任何采集平台，终止执行。")
+            return
+
+        platform_ids = [pid for pid, _ in self.platforms]
+        start_ts = time.time()
+
+        fetched_results: Dict[str, Dict] = {}
+        fetched_id_map: Dict[str, str] = {}
+        failed_ids: List[str] = []
+
+        if self.config["ENABLE_CRAWLER"]:
+            print(f"开始抓取 {len(self.platforms)} 个平台的数据...")
+            fetched_results, fetched_id_map, failed_ids = self.fetcher.crawl_websites(
+                self.platforms, request_interval=self.config["REQUEST_INTERVAL"]
+            )
+            if fetched_results:
+                txt_path = save_titles_to_file(
+                    fetched_results, fetched_id_map, failed_ids
+                )
+                print(f"✅ 最新原始数据已写入: {txt_path}")
+            else:
+                print("⚠️ 未获取到新的榜单数据，本次将尝试使用历史文件。")
+        else:
+            print("配置已关闭采集功能，将尝试基于现有数据生成报告。")
+
+        aggregated_results, aggregated_id_map, title_info = read_all_today_titles(
+            platform_ids
+        )
+        if not aggregated_results:
+            if not fetched_results:
+                print("未找到可用于分析的数据，流程中止。")
+                return
+            aggregated_results = fetched_results
+            aggregated_id_map = fetched_id_map
+            title_info = {}
+
+        new_titles = detect_latest_new_titles(platform_ids)
+        word_groups, filter_words = load_frequency_words()
+        stats, total_titles = count_word_frequency(
+            aggregated_results,
+            word_groups,
+            filter_words,
+            aggregated_id_map,
+            title_info,
+            rank_threshold=self.config["RANK_THRESHOLD"],
+            new_titles=new_titles,
+            mode=self.report_mode,
+        )
+
+        update_info = self._build_update_info()
+        html_file = generate_html_report(
+            stats,
+            total_titles,
+            failed_ids,
+            new_titles,
+            aggregated_id_map,
+            self.report_mode,
+            is_daily_summary=self.report_mode == "daily",
+            update_info=update_info,
+        )
+        print(f"📄 报告已生成: {html_file}")
+
+        if not self.config["ENABLE_NOTIFICATION"]:
+            print("通知功能已关闭，跳过推送。")
+            return
+
+        send_to_notifications(
+            stats,
+            failed_ids,
+            self._report_label(),
+            new_titles,
+            aggregated_id_map,
+            update_info,
+            self.proxy_url,
+            self.report_mode,
+            html_file,
+        )
+        print(f"🎯 已完成整条链路，耗时 {time.time() - start_ts:.2f} 秒。")
+
+
 def send_to_notifications(
     stats: List[Dict],
     failed_ids: Optional[List] = None,

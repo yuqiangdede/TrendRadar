@@ -31,10 +31,8 @@ report:
 notification:
   enable_notification: true # 是否启用通知功能，如果 false，则不发送手机通知
   message_batch_size: 4000 # 消息分批大小（字节）(这个配置别动)
-  dingtalk_batch_size: 20000 # 钉钉消息分批大小（字节）(这个配置也别动)
-  feishu_batch_size: 29000 # 飞书消息分批大小（字节）
   batch_send_interval: 3 # 批次发送间隔（秒）
-  feishu_message_separator: "━━━━━━━━━━━━━━━━━━━" # feishu 消息分割线
+  message_separator: "━━━━━━━━━━━━━━━━━━━" # feishu 消息分割线
 
   # 🕐 推送时间窗口控制（可选功能）
   # 用途：限制推送的时间范围，避免非工作时间打扰
@@ -55,19 +53,7 @@ notification:
   # 如果你以 fork 的方式将本项目部署在 GitHub 上，请勿在此填写任何 webhooks，而是将 webhooks 填入 GitHub Secret
   # 不然轻则手机上收到奇怪的广告推送，重则存在更严重的安全隐患
   webhooks:
-    feishu_url: "" # 飞书机器人的 webhook URL
-    dingtalk_url: "" # 钉钉机器人的 webhook URL
     wework_url: "" # 企业微信机器人的 webhook URL
-    telegram_bot_token: "" # Telegram Bot Token
-    telegram_chat_id: "" # Telegram Chat ID
-    email_from: "" # 发件人邮箱地址
-    email_password: "" # 发件人邮箱密码或授权码
-    email_to: "" # 收件人邮箱地址，多个收件人用逗号分隔
-    email_smtp_server: "" # SMTP服务器地址（可选，留空自动识别）
-    email_smtp_port: "" # SMTP端口（可选，留空自动识别）
-    ntfy_server_url: "https://ntfy.sh" # ntfy服务器地址，默认使用公共服务，可改为自托管地址
-    ntfy_topic: "" # ntfy主题名称
-    ntfy_token: "" # ntfy访问令牌（可选，用于私有主题）
 
 # 用于让关注度更高的新闻在更前面显示，即用算法重新组合不同平台的热搜排序形成你侧重的热搜，合起来是 1 就行
 weight:

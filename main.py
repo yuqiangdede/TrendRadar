@@ -92,6 +92,11 @@ def load_config():
         "PLATFORMS": config_data["platforms"],
     }
 
+    # 兼容旧的字段名称，避免引用缺失
+    config["FEISHU_MESSAGE_SEPARATOR"] = config["MESSAGE_SEPARATOR"]
+    config["DINGTALK_BATCH_SIZE"] = config["MESSAGE_BATCH_SIZE"]
+    config["FEISHU_BATCH_SIZE"] = config["MESSAGE_BATCH_SIZE"]
+
     # 通知渠道配置（环境变量优先）
     # 通知相关配置，优先使用环境变量
     notification = config_data.get("notification", {})

@@ -33,8 +33,6 @@ def load_config():
 
     # 构建配置
     config = {
-        "VERSION_CHECK_URL": config_data["app"]["version_check_url"],
-        "SHOW_VERSION_UPDATE": config_data["app"]["show_version_update"],
         "REQUEST_INTERVAL": config_data["crawler"]["request_interval"],
         "REPORT_MODE": os.environ.get("REPORT_MODE", "").strip()
         or config_data["report"]["mode"],
@@ -159,49 +157,6 @@ def get_output_path(subfolder: str, filename: str) -> str:
     ensure_directory_exists(str(output_dir))
     return str(output_dir / filename)
 
-
-def check_version_update(
-    current_version: str, version_url: str, proxy_url: Optional[str] = None
-) -> Tuple[bool, Optional[str]]:
-    """检查版本更新"""
-    try:
-        proxies = None
-        if proxy_url:
-            proxies = {"http": proxy_url, "https": proxy_url}
-
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "text/plain, */*",
-            "Cache-Control": "no-cache",
-        }
-
-        response = requests.get(
-            version_url, proxies=proxies, headers=headers, timeout=10
-        )
-        response.raise_for_status()
-
-        remote_version = response.text.strip()
-        print(f"当前版本: {current_version}, 远程版本: {remote_version}")
-
-        # 比较版本
-        def parse_version(version_str):
-            try:
-                parts = version_str.strip().split(".")
-                if len(parts) != 3:
-                    raise ValueError("版本号格式不正确")
-                return int(parts[0]), int(parts[1]), int(parts[2])
-            except:
-                return 0, 0, 0
-
-        current_tuple = parse_version(current_version)
-        remote_tuple = parse_version(remote_version)
-
-        need_update = current_tuple < remote_tuple
-        return need_update, remote_version if need_update else None
-
-    except Exception as e:
-        print(f"版本检查失败: {e}")
-        return False, None
 
 
 def is_first_crawl_today() -> bool:
@@ -1410,7 +1365,6 @@ def generate_html_report(
     id_to_name: Optional[Dict] = None,
     mode: str = "daily",
     is_daily_summary: bool = False,
-    update_info: Optional[Dict] = None,
 ) -> str:
     """生成HTML报告"""
     if is_daily_summary:
@@ -1428,7 +1382,7 @@ def generate_html_report(
     report_data = prepare_report_data(stats, failed_ids, new_titles, id_to_name, mode)
 
     html_content = render_html_content(
-        report_data, total_titles, is_daily_summary, mode, update_info
+        report_data, total_titles, is_daily_summary, mode
     )
 
     with open(file_path, "w", encoding="utf-8") as f:
@@ -1447,7 +1401,6 @@ def render_html_content(
     total_titles: int,
     is_daily_summary: bool = False,
     mode: str = "daily",
-    update_info: Optional[Dict] = None,
 ) -> str:
     """渲染HTML内容"""
     html = """
@@ -2125,13 +2078,6 @@ def render_html_content(
                         GitHub 开源项目
                     </a>"""
 
-    if update_info:
-        html += f"""
-                    <br>
-                    <span style="color: #ea580c; font-weight: 500;">
-                        发现新版本 {update_info['remote_version']}，当前版本 {update_info['current_version']}
-                    </span>"""
-
     html += """
                 </div>
             </div>
@@ -2454,7 +2400,6 @@ def render_html_content(
 def split_content_into_batches(
     report_data: Dict,
     format_type: str,
-    update_info: Optional[Dict] = None,
     max_bytes: int = None,
     mode: str = "daily",
 ) -> List[str]:
@@ -2496,24 +2441,14 @@ def split_content_into_batches(
     base_footer = ""
     if format_type == "wework":
         base_footer = f"\n\n\n> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
-        if update_info:
-            base_footer += f"\n> TrendRadar 发现新版本 **{update_info['remote_version']}**，当前 **{update_info['current_version']}**"
     elif format_type == "telegram":
         base_footer = f"\n\n更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
-        if update_info:
-            base_footer += f"\nTrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}"
     elif format_type == "ntfy":
         base_footer = f"\n\n> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
-        if update_info:
-            base_footer += f"\n> TrendRadar 发现新版本 **{update_info['remote_version']}**，当前 **{update_info['current_version']}**"
     elif format_type == "feishu":
         base_footer = f"\n\n<font color='grey'>更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}</font>"
-        if update_info:
-            base_footer += f"\n<font color='grey'>TrendRadar 发现新版本 {update_info['remote_version']}，当前 {update_info['current_version']}</font>"
     elif format_type == "dingtalk":
         base_footer = f"\n\n> 更新时间：{now.strftime('%Y-%m-%d %H:%M:%S')}"
-        if update_info:
-            base_footer += f"\n> TrendRadar 发现新版本 **{update_info['remote_version']}**，当前 **{update_info['current_version']}**"
 
     stats_header = ""
     if report_data["stats"]:
@@ -2953,16 +2888,6 @@ class NewsAnalyzer:
         }
         return mapping.get(self.report_mode, "日常汇总")
 
-    def _build_update_info(self) -> Optional[Dict[str, str]]:
-        if not self.config["SHOW_VERSION_UPDATE"]:
-            return None
-        need_update, remote_version = check_version_update(
-            VERSION, self.config["VERSION_CHECK_URL"], self.proxy_url
-        )
-        if need_update and remote_version:
-            return {"remote_version": remote_version, "current_version": VERSION}
-        return None
-
     def run(self) -> None:
         if not self.platforms:
             print("未配置任何采集平台，终止执行。")
@@ -3014,7 +2939,6 @@ class NewsAnalyzer:
             mode=self.report_mode,
         )
 
-        update_info = self._build_update_info()
         html_file = generate_html_report(
             stats,
             total_titles,
@@ -3023,7 +2947,6 @@ class NewsAnalyzer:
             aggregated_id_map,
             self.report_mode,
             is_daily_summary=self.report_mode == "daily",
-            update_info=update_info,
         )
         print(f"📄 报告已生成: {html_file}")
 
@@ -3037,7 +2960,6 @@ class NewsAnalyzer:
             self._report_label(),
             new_titles,
             aggregated_id_map,
-            update_info,
             self.proxy_url,
             self.report_mode,
             html_file,
@@ -3051,7 +2973,6 @@ def send_to_notifications(
     report_type: str = "日常汇总",
     new_titles: Optional[Dict] = None,
     id_to_name: Optional[Dict] = None,
-    update_info: Optional[Dict] = None,
     proxy_url: Optional[str] = None,
     mode: str = "daily",
     html_file_path: Optional[str] = None,
@@ -3077,14 +2998,13 @@ def send_to_notifications(
 
     report_data = prepare_report_data(stats, failed_ids, new_titles, id_to_name, mode)
     wework_url = CONFIG["WEWORK_WEBHOOK_URL"]
-    update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
     if not wework_url:
         print("未配置企业微信 Webhook，跳过通知阶段")
         return results
 
     results["wework"] = send_to_wework(
-        wework_url, report_data, report_type, update_info_to_send, proxy_url, mode
+        wework_url, report_data, report_type, proxy_url, mode
     )
 
     if (
@@ -3103,7 +3023,6 @@ def send_to_wework(
     webhook_url: str,
     report_data: Dict,
     report_type: str,
-    update_info: Optional[Dict] = None,
     proxy_url: Optional[str] = None,
     mode: str = "daily",
 ) -> bool:
@@ -3114,7 +3033,8 @@ def send_to_wework(
         proxies = {"http": proxy_url, "https": proxy_url}
 
     # 获取分批内容
-    batches = split_content_into_batches(report_data, "wework", update_info, mode=mode)
+
+    batches = split_content_into_batches(report_data, "wework", mode=mode)
 
     print(f"企业微信消息分为 {len(batches)} 批次发送 [{report_type}]")
 

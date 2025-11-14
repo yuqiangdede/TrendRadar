@@ -1,7 +1,3 @@
-app:
-  version_check_url: "https://raw.githubusercontent.com/sansan0/TrendRadar/refs/heads/master/version"
-  show_version_update: true # 控制显示版本更新提示，如果 false，则不接受新版本提示
-
 crawler:
   request_interval: 1000 # 请求间隔(毫秒)
   enable_crawler: true # 是否启用爬取新闻功能，如果 false，则直接停止程序
@@ -62,26 +58,111 @@ weight:
   hotness_weight: 0.2 # 热度权重
 
 # name 可以定义任意名称，只具有显示作用，即使项目运行了几天后，忽然改掉 name 也不会影响代码的正常运行
+# name 可以定义任意名称，只具有显示作用，即使项目运行了几天后，忽然改掉 name 也不会影响代码的正常运行
 platforms:
+
+  # === 综合新闻媒体类 ===
   - id: "toutiao"
     name: "今日头条"
   - id: "baidu"
     name: "百度热搜"
-  - id: "wallstreetcn-hot"
-    name: "华尔街见闻"
   - id: "thepaper"
     name: "澎湃新闻"
-  - id: "bilibili-hot-search"
-    name: "bilibili 热搜"
-  - id: "cls-hot"
-    name: "财联社热门"
-  - id: "ifeng"
-    name: "凤凰网"
-  - id: "tieba"
-    name: "贴吧"
-  - id: "weibo"
-    name: "微博"
-  - id: "douyin"
-    name: "抖音"
-  - id: "zhihu"
-    name: "知乎"
+#  - id: "ifeng"
+#    name: "凤凰网"
+#  - id: "cankaoxiaoxi"
+#    name: "参考消息"
+#  - id: "sputniknewscn"
+#    name: "卫星通讯社"
+#  - id: "zaobao"
+#    name: "联合早报"
+#  - id: "mktnews"
+#    name: "MKT新闻"
+#  - id: "kaopu"
+#    name: "靠谱新闻"
+
+#  # === 财经投资类 ===
+#  - id: "wallstreetcn-hot"
+#    name: "华尔街见闻 最热"
+#  - id: "wallstreetcn-quick"
+#    name: "华尔街见闻 快讯"
+#  - id: "wallstreetcn-news"
+#    name: "华尔街见闻 最新"
+#  - id: "cls-hot"
+#    name: "财联社热门"
+#  - id: "gelonghui"
+#    name: "格隆汇"
+#  - id: "xueqiu"
+#    name: "雪球"
+#  - id: "jin10"
+#    name: "金十数据"
+#  - id: "fastbull"
+#    name: "快讯通"
+#
+#  # === 社交/短视频/娱乐类 ===
+#  - id: "weibo"
+#    name: "微博"
+#  - id: "douyin"
+#    name: "抖音"
+#  - id: "bilibili-hot-search"
+#    name: "bilibili 热搜"
+#  - id: "tieba"
+#    name: "贴吧"
+#  - id: "zhihu"
+#    name: "知乎"
+#  - id: "hupu"
+#    name: "虎扑"
+#
+#  # === 科技类平台 ===
+#  - id: "ithome"
+#    name: "IT之家"
+#  - id: "juejin"
+#    name: "掘金"
+#  - id: "github"
+#    name: "GitHub"
+#  - id: "hackernews"
+#    name: "Hacker News"
+#  - id: "solidot"
+#    name: "Solidot"
+#  - id: "v2ex"
+#    name: "V2EX"
+#  - id: "nowcoder"
+#    name: "牛客网"
+#  - id: "pcbeta"
+#    name: "远景论坛"
+#  - id: "sspai"
+#    name: "少数派"
+#  - id: "producthunt"
+#    name: "ProductHunt"
+#
+#  # === 其他/工具类 ===
+#  - id: "chongbuluo"
+#    name: "虫部落"
+
+  # ======================================================
+  # 暂时失败的渠道（可能需要修复或接口已变更）
+  # 备注：以下渠道在测试中抓取失败，已暂时注释
+  # 如需使用请检查API接口状态或联系维护团队
+  # ======================================================
+
+  # 失败的综合新闻媒体类
+  # - id: "sina"
+  #   name: "新浪"           # 失败原因：接口可能已变更
+  # - id: "sohu"
+  #   name: "搜狐"           # 失败原因：接口可能已变更
+
+  # 失败的财经类
+  # - id: "ghxi"
+  #   name: "国海证券"       # 失败原因：接口可能已变更
+
+  # 失败的社交/短视频类
+  # - id: "kuaishou"
+  #   name: "快手"           # 失败原因：接口可能已变更
+  # - id: "smzdm"
+  #   name: "什么值得买"     # 失败原因：接口可能已变更
+
+  # 失败的科技类
+  # - id: "36kr"
+  #   name: "36氪"           # 失败原因：接口可能已变更
+  # - id: "linuxdo"
+  #   name: "LinuxDo"        # 失败原因：接口可能已变更

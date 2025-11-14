@@ -894,7 +894,7 @@ def format_time_display(first_time: str, last_time: str) -> str:
 
 
 def format_rank_display(ranks: List[int], rank_threshold: int, format_type: str) -> str:
-    """统一的排名格式化方法"""
+    """Unified rank display for WeCom and HTML"""
     if not ranks:
         return ""
 
@@ -905,18 +905,6 @@ def format_rank_display(ranks: List[int], rank_threshold: int, format_type: str)
     if format_type == "html":
         highlight_start = "<font color='red'><strong>"
         highlight_end = "</strong></font>"
-    elif format_type == "feishu":
-        highlight_start = "<font color='red'>**"
-        highlight_end = "**</font>"
-    elif format_type == "dingtalk":
-        highlight_start = "**"
-        highlight_end = "**"
-    elif format_type == "wework":
-        highlight_start = "**"
-        highlight_end = "**"
-    elif format_type == "telegram":
-        highlight_start = "<b>"
-        highlight_end = "</b>"
     else:
         highlight_start = "**"
         highlight_end = "**"
@@ -931,6 +919,7 @@ def format_rank_display(ranks: List[int], rank_threshold: int, format_type: str)
             return f"[{min_rank}]"
         else:
             return f"[{min_rank} - {max_rank}]"
+
 
 
 def count_word_frequency(
@@ -1344,158 +1333,73 @@ def prepare_report_data(
 def format_title_for_platform(
     platform: str, title_data: Dict, show_source: bool = True
 ) -> str:
-    """统一的标题格式化方法"""
+    """Format news titles for WeCom notifications or HTML preview"""
     rank_display = format_rank_display(
         title_data["ranks"], title_data["rank_threshold"], platform
     )
 
     link_url = title_data["mobile_url"] or title_data["url"]
-
     cleaned_title = clean_title(title_data["title"])
 
-    if platform == "feishu":
-        if link_url:
-            formatted_title = f"[{cleaned_title}]({link_url})"
-        else:
-            formatted_title = cleaned_title
-
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
-
-        if show_source:
-            result = f"<font color='grey'>[{title_data['source_name']}]</font> {title_prefix}{formatted_title}"
-        else:
-            result = f"{title_prefix}{formatted_title}"
-
-        if rank_display:
-            result += f" {rank_display}"
-        if title_data["time_display"]:
-            result += f" <font color='grey'>- {title_data['time_display']}</font>"
-        if title_data["count"] > 1:
-            result += f" <font color='green'>({title_data['count']}次)</font>"
-
-        return result
-
-    elif platform == "dingtalk":
-        if link_url:
-            formatted_title = f"[{cleaned_title}]({link_url})"
-        else:
-            formatted_title = cleaned_title
-
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
-
-        if show_source:
-            result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
-        else:
-            result = f"{title_prefix}{formatted_title}"
-
-        if rank_display:
-            result += f" {rank_display}"
-        if title_data["time_display"]:
-            result += f" - {title_data['time_display']}"
-        if title_data["count"] > 1:
-            result += f" ({title_data['count']}次)"
-
-        return result
-
-    elif platform == "wework":
-        if link_url:
-            formatted_title = f"[{cleaned_title}]({link_url})"
-        else:
-            formatted_title = cleaned_title
-
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
-
-        if show_source:
-            result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
-        else:
-            result = f"{title_prefix}{formatted_title}"
-
-        if rank_display:
-            result += f" {rank_display}"
-        if title_data["time_display"]:
-            result += f" - {title_data['time_display']}"
-        if title_data["count"] > 1:
-            result += f" ({title_data['count']}次)"
-
-        return result
-
-    elif platform == "telegram":
-        if link_url:
-            formatted_title = f'<a href="{link_url}">{html_escape(cleaned_title)}</a>'
-        else:
-            formatted_title = cleaned_title
-
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
-
-        if show_source:
-            result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
-        else:
-            result = f"{title_prefix}{formatted_title}"
-
-        if rank_display:
-            result += f" {rank_display}"
-        if title_data["time_display"]:
-            result += f" <code>- {title_data['time_display']}</code>"
-        if title_data["count"] > 1:
-            result += f" <code>({title_data['count']}次)</code>"
-
-        return result
-
-    elif platform == "ntfy":
-        if link_url:
-            formatted_title = f"[{cleaned_title}]({link_url})"
-        else:
-            formatted_title = cleaned_title
-
-        title_prefix = "🆕 " if title_data.get("is_new") else ""
-
-        if show_source:
-            result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
-        else:
-            result = f"{title_prefix}{formatted_title}"
-
-        if rank_display:
-            result += f" {rank_display}"
-        if title_data["time_display"]:
-            result += f" `- {title_data['time_display']}`"
-        if title_data["count"] > 1:
-            result += f" `({title_data['count']}次)`"
-
-        return result
-
-    elif platform == "html":
-        rank_display = format_rank_display(
-            title_data["ranks"], title_data["rank_threshold"], "html"
+    if platform == "html":
+        source_label = (
+            f"<span class='source'>{html_escape(title_data['source_name'])}</span>"
+            if show_source
+            else ""
         )
 
-        link_url = title_data["mobile_url"] or title_data["url"]
-
-        escaped_title = html_escape(cleaned_title)
-        escaped_source_name = html_escape(title_data["source_name"])
-
+        title_content = html_escape(cleaned_title)
         if link_url:
-            escaped_url = html_escape(link_url)
-            formatted_title = f'[{escaped_source_name}] <a href="{escaped_url}" target="_blank" class="news-link">{escaped_title}</a>'
-        else:
-            formatted_title = (
-                f'[{escaped_source_name}] <span class="no-link">{escaped_title}</span>'
+            title_content = f"<a href='{html_escape(link_url)}' target='_blank'>{title_content}</a>"
+
+        badges = []
+        if title_data.get("is_new"):
+            badges.append("<span class='badge badge-new'>NEW</span>")
+        if title_data["count"] > 1:
+            badges.append(
+                f"<span class='badge badge-count'>{title_data['count']}次</span>"
+            )
+        if rank_display:
+            badges.append(
+                f"<span class='badge badge-rank'>{html_escape(rank_display)}</span>"
+            )
+        if title_data["time_display"]:
+            badges.append(
+                f"<span class='badge badge-time'>{html_escape(title_data['time_display'])}</span>"
             )
 
-        if rank_display:
-            formatted_title += f" {rank_display}"
-        if title_data["time_display"]:
-            escaped_time = html_escape(title_data["time_display"])
-            formatted_title += f" <font color='grey'>- {escaped_time}</font>"
-        if title_data["count"] > 1:
-            formatted_title += f" <font color='green'>({title_data['count']}次)</font>"
+        badges_html = "".join(badges)
+        return f"""
+        <div class="news-item{' new' if title_data.get('is_new') else ''}">
+            <div class="news-content">
+                {source_label}
+                <div class="news-title">{title_content}</div>
+                <div class="news-meta">{badges_html}</div>
+            </div>
+        </div>
+        """
 
-        if title_data.get("is_new"):
-            formatted_title = f"<div class='new-title'>🆕 {formatted_title}</div>"
-
-        return formatted_title
-
+    if link_url:
+        formatted_title = f"[{cleaned_title}]({link_url})"
     else:
-        return cleaned_title
+        formatted_title = cleaned_title
+
+    title_prefix = "🌟 " if title_data.get("is_new") else ""
+
+    if show_source:
+        result = f"[{title_data['source_name']}] {title_prefix}{formatted_title}"
+    else:
+        result = f"{title_prefix}{formatted_title}"
+
+    if rank_display:
+        result += f" {rank_display}"
+    if title_data["time_display"]:
+        result += f" - {title_data['time_display']}"
+    if title_data["count"] > 1:
+        result += f" ({title_data['count']}次)"
+
+    return result
+
 
 
 def generate_html_report(
@@ -3017,7 +2921,7 @@ def split_content_into_batches(
 def send_to_notifications(
     stats: List[Dict],
     failed_ids: Optional[List] = None,
-    report_type: str = "当日汇总",
+    report_type: str = "日常汇总",
     new_titles: Optional[Dict] = None,
     id_to_name: Optional[Dict] = None,
     update_info: Optional[Dict] = None,
@@ -3025,8 +2929,8 @@ def send_to_notifications(
     mode: str = "daily",
     html_file_path: Optional[str] = None,
 ) -> Dict[str, bool]:
-    """发送数据到多个通知平台"""
-    results = {}
+    """Send notifications to WeCom only"""
+    results: Dict[str, bool] = {}
 
     if CONFIG["PUSH_WINDOW"]["ENABLED"]:
         push_manager = PushRecordManager()
@@ -3036,94 +2940,26 @@ def send_to_notifications(
         if not push_manager.is_in_time_range(time_range_start, time_range_end):
             now = get_beijing_time()
             print(
-                f"推送窗口控制：当前时间 {now.strftime('%H:%M')} 不在推送时间窗口 {time_range_start}-{time_range_end} 内，跳过推送"
+                f"推送处于限制时间段，当前时间 {now.strftime('%H:%M')} 不在 {time_range_start}-{time_range_end} 内，跳过发送"
             )
             return results
 
-        if CONFIG["PUSH_WINDOW"]["ONCE_PER_DAY"]:
-            if push_manager.has_pushed_today():
-                print(f"推送窗口控制：今天已推送过，跳过本次推送")
-                return results
-            else:
-                print(f"推送窗口控制：今天首次推送")
+        if CONFIG["PUSH_WINDOW"]["ONCE_PER_DAY"] and push_manager.has_pushed_today():
+            print("推送处于限制模式，今天已推送过，跳过发送")
+            return results
 
     report_data = prepare_report_data(stats, failed_ids, new_titles, id_to_name, mode)
-
-    feishu_url = CONFIG["FEISHU_WEBHOOK_URL"]
-    dingtalk_url = CONFIG["DINGTALK_WEBHOOK_URL"]
     wework_url = CONFIG["WEWORK_WEBHOOK_URL"]
-    telegram_token = CONFIG["TELEGRAM_BOT_TOKEN"]
-    telegram_chat_id = CONFIG["TELEGRAM_CHAT_ID"]
-    email_from = CONFIG["EMAIL_FROM"]
-    email_password = CONFIG["EMAIL_PASSWORD"]
-    email_to = CONFIG["EMAIL_TO"]
-    email_smtp_server = CONFIG.get("EMAIL_SMTP_SERVER", "")
-    email_smtp_port = CONFIG.get("EMAIL_SMTP_PORT", "")
-    ntfy_server_url = CONFIG["NTFY_SERVER_URL"]
-    ntfy_topic = CONFIG["NTFY_TOPIC"]
-    ntfy_token = CONFIG.get("NTFY_TOKEN", "")
-
     update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
 
-    # 发送到飞书
-    if feishu_url:
-        results["feishu"] = send_to_feishu(
-            feishu_url, report_data, report_type, update_info_to_send, proxy_url, mode
-        )
+    if not wework_url:
+        print("未配置企业微信 Webhook，跳过通知阶段")
+        return results
 
-    # 发送到钉钉
-    if dingtalk_url:
-        results["dingtalk"] = send_to_dingtalk(
-            dingtalk_url, report_data, report_type, update_info_to_send, proxy_url, mode
-        )
+    results["wework"] = send_to_wework(
+        wework_url, report_data, report_type, update_info_to_send, proxy_url, mode
+    )
 
-    # 发送到企业微信
-    if wework_url:
-        results["wework"] = send_to_wework(
-            wework_url, report_data, report_type, update_info_to_send, proxy_url, mode
-        )
-
-    # 发送到 Telegram
-    if telegram_token and telegram_chat_id:
-        results["telegram"] = send_to_telegram(
-            telegram_token,
-            telegram_chat_id,
-            report_data,
-            report_type,
-            update_info_to_send,
-            proxy_url,
-            mode,
-        )
-
-    # 发送到 ntfy
-    if ntfy_server_url and ntfy_topic:
-        results["ntfy"] = send_to_ntfy(
-            ntfy_server_url,
-            ntfy_topic,
-            ntfy_token,
-            report_data,
-            report_type,
-            update_info_to_send,
-            proxy_url,
-            mode,
-        )
-
-    # 发送邮件
-    if email_from and email_password and email_to:
-        results["email"] = send_to_email(
-            email_from,
-            email_password,
-            email_to,
-            report_type,
-            html_file_path,
-            email_smtp_server,
-            email_smtp_port,
-        )
-
-    if not results:
-        print("未配置任何通知渠道，跳过通知发送")
-
-    # 如果成功发送了任何通知，且启用了每天只推一次，则记录推送
     if (
         CONFIG["PUSH_WINDOW"]["ENABLED"]
         and CONFIG["PUSH_WINDOW"]["ONCE_PER_DAY"]
@@ -3133,6 +2969,7 @@ def send_to_notifications(
         push_manager.record_push(report_type)
 
     return results
+
 
 
 def send_to_wework(
